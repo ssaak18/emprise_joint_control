@@ -1,0 +1,17 @@
+<launch>
+   <!-- values passed by command line input -->     
+   <arg name="model" />
+   <arg name="gui" default="True" />
+
+   <!-- set these parameters on Parameter Server -->
+   <param name="robot_description" command="cat $(find kortex_description)/robots/gen3_7dof_vision.urdf" />
+   <param name="use_gui" value="$(arg gui)"/>
+
+   <!-- Start node -->
+   <!-- <node name="controller_reader" pkg="controller_reader" type="controller_reader" /> -->
+
+   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find joint_controller_pkg)/urdf.rviz" required="true" />
+   <!-- (required = "true") if rviz dies, entire roslaunch will be killed -->
+</launch>
