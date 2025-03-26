@@ -1,15 +1,26 @@
 #!/usr/bin/env python3
 import rospy
 import sys
+import numpy as np
 from sensor_msgs.msg import JointState
 
 class KinovaController:
     def __init__(self):
         rospy.init_node("kinova_joint_state_controller", anonymous=True)
+        self.joint_input_sub = rospy.Subscriber("/input_states", JointState, self.check_inital_pos)
+        self.kinova_joint_state_sub = rospy.Subscriber("/joint_states", JointState, queue_size=10)
 
         # torque controller?
 
         # get measured state and then have controller move joint to new posistion from input 
+        
+    def check_inital_pos(self, joint_state_msg):
+        robot_init_pos = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        pos = np.array(joint_state_msg.posistions)
+        error = 0.025 #radians
+        return np.all(np.abs((robot_init_pos - pos)) <= error)
+        
+
 
 class SimController:
     def __init__(self):
