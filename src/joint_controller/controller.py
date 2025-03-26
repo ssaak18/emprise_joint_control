@@ -1,24 +1,40 @@
 #!/usr/bin/env python3
 import rospy
 import sys
+import keyboard
 import numpy as np
 from sensor_msgs.msg import JointState
 
 class KinovaController:
     def __init__(self):
         rospy.init_node("kinova_joint_state_controller", anonymous=True)
-        self.joint_input_sub = rospy.Subscriber("/input_states", JointState, self.check_inital_pos)
-        self.kinova_joint_state_sub = rospy.Subscriber("/joint_states", JointState, queue_size=10)
-
-        # torque controller?
-
-        # get measured state and then have controller move joint to new posistion from input 
+        self.joint_input_sub = rospy.Subscriber("/input_states", JointState, self.joint_input_callback)
+        self.kinova_joint_state_sub = rospy.Subscriber("/joint_states", JointState, self.check_inital_pos)
+        self.kinova_pub = rospy.Publisher("/joint_states", JointState, queue_size=10) #replace with diff controller
+        self.is_publishing = False
+        self.good_to_start = False
+        
+        while not self.good_to_start:
+            rospy.loginfo("Please adjust exoskeleton.")
+            
+    def joint_input_callback(self, input_state_msg):
+        if self.is_publishing:
+            self.kinova_joint_state_pub.publish(input_state_msg)
         
     def check_inital_pos(self, joint_state_msg):
         robot_init_pos = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-        pos = np.array(joint_state_msg.posistions)
         error = 0.025 #radians
-        return np.all(np.abs((robot_init_pos - pos)) <= error)
+        self.good_to_start = np.all(np.abs((robot_init_pos - joint_state_msg.posistion)) <= error)
+    
+    def start(self):
+        rospy.loginfo("Starting Sim Controller")
+        rospy.spin()
+        
+        while not rospy.is_shutdown():
+            if keyboard.is_pressed("s"):
+                rospy.loginfo("Publishing started!")
+                publish = not publish
+                self.is_publishing = publish
         
 
 
