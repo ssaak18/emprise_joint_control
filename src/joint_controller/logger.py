@@ -13,6 +13,12 @@ class LoggerNode():
         vel = f"Velocity: {', '.join(map(str, joint_state_msg.velocity))}"
         rospy.loginfo(pos)
         rospy.loginfo(vel)
+        
+    def camera_logger(self, camera_info):
+        rospy.loginfo(camera_info)
+    
+    def skin_logger(self, skin_info):
+        rospy.loginfo(skin_info)
 
 if __name__ == "__main__":
     logger_node = LoggerNode()
