@@ -88,12 +88,7 @@ class ExoDriver:
             rate.sleep()
 
 def start():
-
-    if len(sys.argv) < 2:
-            rospy.loginfo("Usage: rosrun joint_controller_pkg driver.py <mode> <exo_motors>")
-            return
-    
-    mode = sys.argv[1]
+    mode = rospy.get_param("mode", "test")
 
     if mode == "exo":
         exo_driver = ExoDriver(list(map(float, sys.argv[2].split(','))))

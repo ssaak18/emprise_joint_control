@@ -7,7 +7,6 @@ from sensor_msgs.msg import JointState
 
 # class SafteySwitchControlled:
     
-
 class KinovaController:
     def __init__(self):
         rospy.init_node("kinova_joint_state_controller", anonymous=True)
@@ -21,27 +20,34 @@ class KinovaController:
         self.is_publishing = False
         self.good_to_start = False
         
-        while not self.good_to_start:
-            rospy.loginfo("Please adjust exoskeleton.")
+        # move the robot to the straight pos (all joints at 0.0) before starting!
+        
+        rospy.loginfo("Move exoskeleton to initial position")
+        while not rospy.is_shutdown() and not self.good_to_start:
+            rospy.sleep(0.2) 
+            
+        rospy.loginfo("Initial position reached!")
+            
+    def on_key_press(self, key):
+        try:
+            if key.char == 's':
+                self.is_publishing = not self.is_publishing
+                rospy.loginfo(f"joint_state publishing {'started' if self.is_publishing else 'stopped'}!")
+        except AttributeError:
+            pass
             
     def joint_input_callback(self, input_state_msg):
-        if self.is_publishing:
+        if self.is_publishing and self.good_to_start:
             self.kinova_joint_state_pub.publish(input_state_msg)
         
     def check_inital_pos(self, joint_state_msg):
         robot_init_pos = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         error = 0.025 #radians
-        self.good_to_start = np.all(np.abs((robot_init_pos - joint_state_msg.posistion)) <= error)
+        self.good_to_start = np.all(np.abs((robot_init_pos - joint_state_msg.position)) <= error)
     
     def start(self):
         rospy.loginfo("Starting Sim Controller")
         rospy.spin()
-        
-        while not rospy.is_shutdown():
-            if keyboard.is_pressed("s") and self.good_to_start:
-                rospy.loginfo("Publishing started!")
-                publish = not publish
-                self.is_publishing = publish
         
 
 
@@ -63,40 +69,24 @@ class SimController:
             
     def on_key_press(self, key):
         try:
-            if key.char == 's':  # If 's' key is pressed
+            if key.char == 's':
                 self.is_publishing = not self.is_publishing
                 rospy.loginfo(f"joint_state publishing {'started' if self.is_publishing else 'stopped'}!")
         except AttributeError:
-            pass  # Ignore special keys
+            pass
 
     def start(self):
         rospy.loginfo("Starting Sim Controller")
         rospy.spin()
-        # rate = rospy.Rate(10)  # 10 Hz loop
-
-        # while not rospy.is_shutdown():
-        #     if keyboard.is_pressed("s"):
-        #         self.is_publishing = not self.is_publishing
-        #         rospy.loginfo(f"Publishing {'started' if self.is_publishing else 'stopped'}!")
-        #         rospy.sleep(0.5)  # Prevent rapid toggling
-
-        #     rate.sleep()  # Maintain loop rate
-
-def start(safe_to_start):
-    if safe_to_start:  
-        if len(sys.argv) < 1:
-            rospy.loginfo("Usage: rosrun joint_controller_pkg controller.py <mode>")
-            return
-
-        mode = sys.argv[1]
-
-        if mode == "sim":
-            controller = SimController()
-            controller.start()
-        elif mode == "kinova":
-            controller = KinovaController()
-            controller.start()
-
-safe_to_start = True
+        
 if __name__ == "__main__": 
-    start(safe_to_start)
+    
+    mode = rospy.get_param("mode", "test")
+    robot_controller = rospy.get_param("use_robot_controllersensor", "pos")
+    
+    if mode == "sim":
+        controller = SimController()
+        controller.start()
+    elif mode == "kinova":
+        controller = KinovaController()
+        controller.start()
