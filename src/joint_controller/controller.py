@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 import rospy
 import sys
-import keyboard
+from pynput import keyboard
 import numpy as np
 from sensor_msgs.msg import JointState
+
+# class SafteySwitchControlled:
+    
 
 class KinovaController:
     def __init__(self):
@@ -11,6 +14,10 @@ class KinovaController:
         self.joint_input_sub = rospy.Subscriber("/input_states", JointState, self.joint_input_callback)
         self.kinova_joint_state_sub = rospy.Subscriber("/joint_states", JointState, self.check_inital_pos)
         self.kinova_pub = rospy.Publisher("/joint_states", JointState, queue_size=10) #replace with diff controller
+        
+        self.listener = keyboard.Listener(on_press=self.on_key_press)
+        self.listener.start()
+        
         self.is_publishing = False
         self.good_to_start = False
         
@@ -31,7 +38,7 @@ class KinovaController:
         rospy.spin()
         
         while not rospy.is_shutdown():
-            if keyboard.is_pressed("s"):
+            if keyboard.is_pressed("s") and self.good_to_start:
                 rospy.loginfo("Publishing started!")
                 publish = not publish
                 self.is_publishing = publish
@@ -43,15 +50,37 @@ class SimController:
         rospy.init_node("sim_joint_state_controller", anonymous=True)
         self.kinova_joint_state_pub = rospy.Publisher("/joint_states", JointState, queue_size=10)
         self.joint_input_sub = rospy.Subscriber("/input_states", JointState, self.joint_input_callback)
+        self.is_publishing = False
+        
+        self.listener = keyboard.Listener(on_press=self.on_key_press)
+        self.listener.start()
 
         # need robot inputs/outputs
 
     def joint_input_callback(self, joint_state_msg):
-        self.kinova_joint_state_pub.publish(joint_state_msg)
+        if self.is_publishing:
+            self.kinova_joint_state_pub.publish(joint_state_msg)
+            
+    def on_key_press(self, key):
+        try:
+            if key.char == 's':  # If 's' key is pressed
+                self.is_publishing = not self.is_publishing
+                rospy.loginfo(f"joint_state publishing {'started' if self.is_publishing else 'stopped'}!")
+        except AttributeError:
+            pass  # Ignore special keys
 
     def start(self):
         rospy.loginfo("Starting Sim Controller")
         rospy.spin()
+        # rate = rospy.Rate(10)  # 10 Hz loop
+
+        # while not rospy.is_shutdown():
+        #     if keyboard.is_pressed("s"):
+        #         self.is_publishing = not self.is_publishing
+        #         rospy.loginfo(f"Publishing {'started' if self.is_publishing else 'stopped'}!")
+        #         rospy.sleep(0.5)  # Prevent rapid toggling
+
+        #     rate.sleep()  # Maintain loop rate
 
 def start(safe_to_start):
     if safe_to_start:  
