@@ -162,6 +162,7 @@ include_directories(
 catkin_install_python(PROGRAMS 
   src/joint_controller/controller.py
   src/joint_controller/driver.py
+  src/joint_controller/logger.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

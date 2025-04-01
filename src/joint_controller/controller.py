@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import rospy
 import sys
-from pynput import keyboard
 import numpy as np
 from sensor_msgs.msg import JointState
 
@@ -9,15 +8,14 @@ from sensor_msgs.msg import JointState
     
 class KinovaController:
     def __init__(self):
-        rospy.init_node("kinova_joint_state_controller", anonymous=True)
+        rospy.init_node("controller", anonymous=True)
         self.joint_input_sub = rospy.Subscriber("/input_states", JointState, self.joint_input_callback)
         self.kinova_joint_state_sub = rospy.Subscriber("/joint_states", JointState, self.check_inital_pos)
         self.kinova_pub = rospy.Publisher("/joint_states", JointState, queue_size=10) #replace with diff controller
         
-        self.listener = keyboard.Listener(on_press=self.on_key_press)
-        self.listener.start()
         
-        self.is_publishing = False
+        self.pos = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        
         self.good_to_start = False
         
         # move the robot to the straight pos (all joints at 0.0) before starting!
@@ -26,18 +24,16 @@ class KinovaController:
         while not rospy.is_shutdown() and not self.good_to_start:
             rospy.sleep(0.2) 
             
+        # init_state_msg = JointState()
+        # init_state_msg.header.stamp = rospy.Time.now()
+        # init_state_msg.name = [f"joint_{i+1}" for i in range(len(self.pos))]
+        # init_state_msg.position = self.pos
+        # self.kinova_joint_state_pub.publish(init_state_msg)
+            
         rospy.loginfo("Initial position reached!")
             
-    def on_key_press(self, key):
-        try:
-            if key.char == 's':
-                self.is_publishing = not self.is_publishing
-                rospy.loginfo(f"joint_state publishing {'started' if self.is_publishing else 'stopped'}!")
-        except AttributeError:
-            pass
-            
     def joint_input_callback(self, input_state_msg):
-        if self.is_publishing and self.good_to_start:
+        if self.good_to_start:
             self.kinova_joint_state_pub.publish(input_state_msg)
         
     def check_inital_pos(self, joint_state_msg):
@@ -53,36 +49,31 @@ class KinovaController:
 
 class SimController:
     def __init__(self):
-        rospy.init_node("sim_joint_state_controller", anonymous=True)
+        rospy.init_node("controller", anonymous=True)
         self.kinova_joint_state_pub = rospy.Publisher("/joint_states", JointState, queue_size=10)
         self.joint_input_sub = rospy.Subscriber("/input_states", JointState, self.joint_input_callback)
-        self.is_publishing = False
-        
-        self.listener = keyboard.Listener(on_press=self.on_key_press)
-        self.listener.start()
 
-        # need robot inputs/outputs
+        # self.pos = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        # init_state_msg = JointState()
+        # init_state_msg.header.stamp = rospy.Time.now()
+        # init_state_msg.name = [f"joint_{i+1}" for i in range(len(self.pos))]
+        # init_state_msg.position = self.pos
+        # self.joint_input_callback(init_state_msg)
+        # self.kinova_joint_state_pub.publish(init_state_msg)
 
     def joint_input_callback(self, joint_state_msg):
-        if self.is_publishing:
-            self.kinova_joint_state_pub.publish(joint_state_msg)
+        self.kinova_joint_state_pub.publish(joint_state_msg)
             
-    def on_key_press(self, key):
-        try:
-            if key.char == 's':
-                self.is_publishing = not self.is_publishing
-                rospy.loginfo(f"joint_state publishing {'started' if self.is_publishing else 'stopped'}!")
-        except AttributeError:
-            pass
-
     def start(self):
         rospy.loginfo("Starting Sim Controller")
         rospy.spin()
         
 if __name__ == "__main__": 
     
-    mode = rospy.get_param("mode", "test")
-    robot_controller = rospy.get_param("use_robot_controllersensor", "pos")
+    mode = rospy.get_param("mode", "sim")
+    robot_controller = rospy.get_param("robot_controller", "pos")
+    
+    print(mode)
     
     if mode == "sim":
         controller = SimController()

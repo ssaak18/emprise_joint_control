@@ -2,14 +2,28 @@
 import rospy
 import math
 from dynamixel_sdk import * 
+from pynput import keyboard
 import sys
 from sensor_msgs.msg import JointState
 
 class TestDriver:
     def __init__(self):
 
-        rospy.init_node("test_driver", anonymous=True)
+        rospy.init_node("driver", anonymous=True)
         self.joint_input_pub = rospy.Publisher("/input_states", JointState, queue_size=10)
+        
+        self.listener = keyboard.Listener(on_press=self.on_key_press)
+        self.listener.start()
+        
+        self.is_publishing = False
+        
+    def on_key_press(self, key):
+        try:
+            if key.char == 's':
+                self.is_publishing = not self.is_publishing
+                rospy.loginfo(f"joint_state publishing {'started' if self.is_publishing else 'stopped'}!")
+        except AttributeError:
+            pass
 
     def get_joint_pos(self):
         joint_pos = [0.0,1.0,2.0,3.0,4.0,5.0,6.0]
@@ -17,8 +31,10 @@ class TestDriver:
         joint_state_msg = JointState()
         joint_state_msg.header.stamp = rospy.Time.now()
         joint_state_msg.name = [f"joint_{i+1}" for i in range(len(joint_pos))]
-        joint_state_msg.position = joint_pos #array of floats
-        self.joint_input_pub.publish(joint_state_msg)
+        joint_state_msg.position = joint_pos
+        
+        if self.is_publishing:
+            self.joint_input_pub.publish(joint_state_msg)
 
     def start(self):
         rospy.loginfo("Starting Test Driver")
@@ -46,7 +62,7 @@ class ExoDriver:
         self.packetHandler = PacketHandler(self.PROTOCOL_VERSION)
         self.motor_ids = motor_ids
 
-        rospy.init_node("exo_driver", anonymous=True)
+        rospy.init_node("driver", anonymous=True)
         self.joint_input_pub = rospy.Publisher("/input_states", JointState, queue_size=10)
 
         # open port
