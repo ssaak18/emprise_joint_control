@@ -10,7 +10,6 @@ from sensor_msgs.msg import JointState
 class InputDriver:
     
     def __init__(self, node_name):
-        rospy.init_node(node_name, anonymous=True)
         self.joint_input_pub = rospy.Publisher("/input_states", JointState, queue_size=10)
         self.is_publishing = False
 
@@ -55,7 +54,7 @@ class TestDriver(InputDriver):
             self.joint_input_pub.publish(super().make_joint_msg(joint_pos))
 
 class KeyDriver(InputDriver):
-    """Simulation driver"""
+    """Keyboard driver"""
     
     global joint_pos 
     joint_pos = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -143,7 +142,11 @@ class ExoDriver(InputDriver):
             self.joint_input_pub.publish(super().make_joint_msg(joint_pos))
 
 def start():
-    mode = rospy.get_param("mode", "key")
+    rospy.init_node("driver_node", anonymous=True)
+
+    mode = rospy.get_param("~driver_mode", "test")
+    rospy.loginfo(f"[DRIVER] mode param: {mode}")
+
     if mode == "exo":
         exo_driver = ExoDriver([])
         exo_driver.start()
@@ -151,8 +154,8 @@ def start():
         test_driver = TestDriver()
         test_driver.start()
     elif mode == "key":
-        test_driver = KeyDriver()
-        test_driver.start()
+        key_driver = KeyDriver()
+        key_driver.start()
 
 if __name__ == "__main__": 
     start()

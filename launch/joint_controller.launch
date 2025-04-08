@@ -8,16 +8,16 @@
    <param name="use_gui" value="$(arg gui)"/>
 
    <!-- Start nodes -->
-   <node name="controller_node" pkg="joint_controller_pkg" type="controller.py">
+   <node name="controller_node" pkg="joint_controller_pkg" type="controller.py" output="screen">
         <param name="mode" value="sim"/>
         <!-- <param name="mode" value="kinova"/> -->
         <param name="robot_controller" value="pos"/>
         <!-- <param name="robot_controller" value="current"/> -->
     </node>
 
-    <node name="driver_node" pkg="joint_controller_pkg" type="driver.py">
+    <node name="driver_node" pkg="joint_controller_pkg" type="driver.py" output="screen">
         <!-- <param name="mode" value="test"/> -->
-        <param name="mode" value="key"/>
+        <param name="driver_mode" value="key"/>
         <!-- <param name="mode" value="exo"/> -->
     </node>
 
