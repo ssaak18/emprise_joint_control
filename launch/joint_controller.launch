@@ -16,7 +16,8 @@
     </node>
 
     <node name="driver_node" pkg="joint_controller_pkg" type="driver.py">
-        <param name="mode" value="test"/>
+        <!-- <param name="mode" value="test"/> -->
+        <param name="mode" value="key"/>
         <!-- <param name="mode" value="exo"/> -->
     </node>
 

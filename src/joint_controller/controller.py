@@ -4,6 +4,7 @@ import numpy as np
 from sensor_msgs.msg import JointState
 
 class SafetySwitchControlled:
+    
     def __init__(self, node_name):
         rospy.init_node(node_name, anonymous=True)
         self.joint_input_sub = rospy.Subscriber("/input_states", JointState, self.joint_input_callback)

@@ -4,6 +4,7 @@ import math
 from dynamixel_sdk import * 
 from pynput import keyboard
 import sys
+import numpy as np
 from sensor_msgs.msg import JointState
 
 class InputDriver:
@@ -18,9 +19,9 @@ class InputDriver:
         self.listener.start()
 
     def on_key_press(self, key):
-        """Toggle joint state publishing when 's' is pressed."""
+        """Toggle joint state publishing when 'z' is pressed."""
         try:
-            if key.char == 's':
+            if key.char == 'z':
                 self.is_publishing = not self.is_publishing
                 rospy.loginfo(f"Joint state publishing {'started' if self.is_publishing else 'stopped'}!")
         except AttributeError:
@@ -50,6 +51,56 @@ class TestDriver(InputDriver):
     def get_joint_pos(self):
         joint_pos = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
         
+        if self.is_publishing:
+            self.joint_input_pub.publish(super().make_joint_msg(joint_pos))
+
+class KeyDriver(InputDriver):
+    """Simulation driver"""
+    
+    global joint_pos 
+    joint_pos = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+    def __init__(self):
+        super().__init__("key_driver")
+        
+    def on_key_press(self, key):
+        """Basic keyboard controls; keys above/below each other (ex. q/a) control +/-.1 for the 7 joints """
+        try:
+            if key.char == 'z':
+                self.is_publishing = not self.is_publishing
+                rospy.loginfo(f"Joint state publishing {'started' if self.is_publishing else 'stopped'}!")
+            elif key.char == 'q':
+                joint_pos[0] += .1
+            elif key.char == 'a':
+                joint_pos[0] -= .1
+            elif key.char == 'w':
+                joint_pos[1] += .1
+            elif key.char == 's':
+                joint_pos[1] -= .1
+            elif key.char == 'e':
+                joint_pos[2] += .1
+            elif key.char == 'd':
+                joint_pos[2] -= .1
+            elif key.char == 'r':
+                joint_pos[3] += .1
+            elif key.char == 'f':
+                joint_pos[3] -= .1
+            elif key.char == 't':
+                joint_pos[4] += .1
+            elif key.char == 'g':
+                joint_pos[4] -= .1
+            elif key.char == 'y':
+                joint_pos[5] += .1
+            elif key.char == 'h':
+                joint_pos[5] -= .1
+            elif key.char == 'u':
+                joint_pos[6] += .1
+            elif key.char == 'j':
+                joint_pos[6] -= .1
+        except AttributeError:
+            pass
+
+    def get_joint_pos(self):
         if self.is_publishing:
             self.joint_input_pub.publish(super().make_joint_msg(joint_pos))
 
@@ -92,13 +143,15 @@ class ExoDriver(InputDriver):
             self.joint_input_pub.publish(super().make_joint_msg(joint_pos))
 
 def start():
-    mode = rospy.get_param("mode", "test")
-
+    mode = rospy.get_param("mode", "key")
     if mode == "exo":
-        exo_driver = ExoDriver(list(map(int, sys.argv[1].split(','))))
+        exo_driver = ExoDriver([])
         exo_driver.start()
     elif mode == "test":
         test_driver = TestDriver()
+        test_driver.start()
+    elif mode == "key":
+        test_driver = KeyDriver()
         test_driver.start()
 
 if __name__ == "__main__": 
