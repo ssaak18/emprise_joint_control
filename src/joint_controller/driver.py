@@ -26,11 +26,12 @@ class InputDriver:
         except AttributeError:
             pass
         
-    def make_joint_msg(self, pos):
+    def make_joint_msg(self, pos, vel):
         joint_state_msg = JointState()
         joint_state_msg.header.stamp = rospy.Time.now()
         joint_state_msg.name = [f"joint_{i+1}" for i in range(len(pos))]
         joint_state_msg.position = pos
+        joint_state_msg.velocity = vel
         return joint_state_msg
 
     def start(self):
@@ -49,15 +50,17 @@ class TestDriver(InputDriver):
 
     def get_joint_pos(self):
         joint_pos = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+        joint_vel = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         
         if self.is_publishing:
-            self.joint_input_pub.publish(super().make_joint_msg(joint_pos))
+            self.joint_input_pub.publish(super().make_joint_msg(joint_pos, joint_vel))
 
 class KeyDriver(InputDriver):
     """Keyboard driver"""
     
     global joint_pos 
     joint_pos = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    joint_vel = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
     def __init__(self):
         super().__init__("key_driver")
@@ -101,7 +104,7 @@ class KeyDriver(InputDriver):
 
     def get_joint_pos(self):
         if self.is_publishing:
-            self.joint_input_pub.publish(super().make_joint_msg(joint_pos))
+            self.joint_input_pub.publish(super().make_joint_msg(joint_pos, self.joint_vel))
 
 class ExoDriver(InputDriver):
     """Driver for controlling real exoskeleton hardware via Dynamixel motors"""
@@ -129,12 +132,14 @@ class ExoDriver(InputDriver):
 
     def get_joint_pos(self):
         joint_pos = []
+        joint_vel = []
 
         for motor_id in self.motor_ids:
-            dxl_pos, dxl_comm_result, _ = self.packetHandler.read4ByteTxRx(self.portHandler, motor_id, self.PRESENT_POS_ADDR)
+            dxl_pos, dxl_comm_result1, _ = self.packetHandler.read4ByteTxRx(self.portHandler, motor_id, self.PRESENT_POS_ADDR)
+            dxl_vel, dxl_comm_result2, _ = self.packetHandler.read4ByteTxRx(self.portHandler, motor_id, self.PRESENT_POS_ADDR)
 
-            if dxl_comm_result != COMM_SUCCESS:
-                rospy.logerr(f"Motor {motor_id}: Read error {dxl_comm_result}")
+            if dxl_comm_result1 != COMM_SUCCESS or dxl_comm_result2 != COMM_SUCCESS:
+                rospy.logerr(f"Motor {motor_id}: Read error {dxl_comm_result1, dxl_comm_result2}")
                 joint_pos.append(0.0)
                 continue
 
@@ -143,6 +148,7 @@ class ExoDriver(InputDriver):
             if motor_id % 2 == 1:
                 pos_rad = -1 * pos_rad
             joint_pos.append(pos_rad)
+            joint_vel.append(dxl_vel)
 
         # Initialize zero offsets once
         if self.zero_offsets is None:
@@ -154,7 +160,7 @@ class ExoDriver(InputDriver):
         ]
 
         if self.is_publishing:
-            self.joint_input_pub.publish(super().make_joint_msg(relative_joint_pos))
+            self.joint_input_pub.publish(super().make_joint_msg(relative_joint_pos, joint_vel))
 
     def unsigned_to_signed(self, val, bits=32):
         if val >= 2**(bits - 1):

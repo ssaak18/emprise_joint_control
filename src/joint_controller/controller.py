@@ -5,25 +5,43 @@ from sensor_msgs.msg import JointState
 
 class SafetySwitchControlled:
     
+    old_pos = None
+    
     def __init__(self, node_name):
         rospy.init_node(node_name, anonymous=True)
         self.joint_input_sub = rospy.Subscriber("/input_states", JointState, self.joint_input_callback)
         self.kinova_joint_state_pub = rospy.Publisher("/joint_states", JointState, queue_size=10)
 
     def joint_input_callback(self, joint_state_msg):
-        #in_bounds_pos = self.check_joint_limit(joint_state_msg.position)
-        in_bounds_pos = joint_state_msg.position
+        if self.old_pos == None:
+            self.old_pos = joint_state_msg.position
+            
+        #  in_bounds_pos = self.safe_move(joint_state_msg.velocity, joint_state_msg.position)
+            
+        in_bounds_pos = self.check_joint_limit(joint_state_msg.position)
         new_joint_state_msg = JointState()
         new_joint_state_msg.header.stamp = rospy.Time.now()
         new_joint_state_msg.name = [f"joint_{i+1}" for i in range(len(in_bounds_pos))]
         new_joint_state_msg.position = in_bounds_pos
         self.kinova_joint_state_pub.publish(new_joint_state_msg)
+        
+    def safe_move(self, joint_vel, new_pos):
+        
+        vel = np.array(joint_vel)
+        safe_speed = np.all((vel >= -100) & (vel <= 100))
+        
+        if safe_speed:
+            self.old_pos = self.check_joint_limit(new_pos.position)
+        else:
+            rospy.loginfo("Too fast!")
+            
+        return self.old_pos
+        
 
     def check_joint_limit(self, joint_pos):
         """ Ensures joint values remain in Kinova joint ranges """
-        offset = np.array([0.0, 2.35, 0.0, 2.28, 0.0, 2.2, 0.0])
-        max = 6.28
-        min = -6.28
+        max = float('inf') 
+        min = -float('inf') 
         check_pos = np.array(joint_pos)
         joint_min = np.array([min, -2.25, min, -2.58, min, -2.1, min])
         joint_max = np.array([max, 2.25, max, 2.58, max, 2.1, max])
