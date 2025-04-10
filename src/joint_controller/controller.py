@@ -11,7 +11,8 @@ class SafetySwitchControlled:
         self.kinova_joint_state_pub = rospy.Publisher("/joint_states", JointState, queue_size=10)
 
     def joint_input_callback(self, joint_state_msg):
-        in_bounds_pos = self.check_joint_limit(joint_state_msg.position)
+        #in_bounds_pos = self.check_joint_limit(joint_state_msg.position)
+        in_bounds_pos = joint_state_msg.position
         new_joint_state_msg = JointState()
         new_joint_state_msg.header.stamp = rospy.Time.now()
         new_joint_state_msg.name = [f"joint_{i+1}" for i in range(len(in_bounds_pos))]
@@ -20,9 +21,12 @@ class SafetySwitchControlled:
 
     def check_joint_limit(self, joint_pos):
         """ Ensures joint values remain in Kinova joint ranges """
+        offset = np.array([0.0, 2.35, 0.0, 2.28, 0.0, 2.2, 0.0])
+        max = 6.28
+        min = -6.28
         check_pos = np.array(joint_pos)
-        joint_min = np.array([-np.inf, -2.25, -np.inf, -2.58, -np.inf, -2.1, -np.inf])
-        joint_max = np.array([np.inf, 2.25, np.inf, 2.58, np.inf, 2.1, np.inf])
+        joint_min = np.array([min, -2.25, min, -2.58, min, -2.1, min])
+        joint_max = np.array([max, 2.25, max, 2.58, max, 2.1, max])
         return np.clip(check_pos, joint_min, joint_max)
 
     def start(self):

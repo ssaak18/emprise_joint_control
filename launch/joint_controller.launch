@@ -17,8 +17,8 @@
 
     <node name="driver_node" pkg="joint_controller_pkg" type="driver.py" output="screen">
         <!-- <param name="mode" value="test"/> -->
-        <param name="driver_mode" value="key"/>
-        <!-- <param name="mode" value="exo"/> -->
+        <!-- <param name="driver_mode" value="key"/> -->
+        <param name="mode" value="exo"/>
     </node>
 
    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />

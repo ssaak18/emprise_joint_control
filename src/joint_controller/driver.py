@@ -105,9 +105,9 @@ class KeyDriver(InputDriver):
 
 class ExoDriver(InputDriver):
     """Driver for controlling real exoskeleton hardware via Dynamixel motors"""
-
+    zero_offsets = None
     PORT = "/dev/ttyUSB0"
-    BAUDRATE = 57600  # Factory default setting
+    BAUDRATE = 1000000  # set for all servos
     PROTOCOL_VERSION = 2.0
     PRESENT_POS_ADDR = 132  # Position address in control table (0-4095)
     MAX_POS = 4095.0
@@ -126,29 +126,46 @@ class ExoDriver(InputDriver):
             exit()
 
     def get_joint_pos(self):
-        """Reads and publishes joint positions from Dynamixel motors"""
         joint_pos = []
-        
+
         for motor_id in self.motor_ids:
-            dxl_pos, dxl_comm_result = self.packetHandler.read4ByteTxRx(self.portHandler, motor_id, self.PRESENT_POS_ADDR)
+            dxl_pos, dxl_comm_result, _ = self.packetHandler.read4ByteTxRx(self.portHandler, motor_id, self.PRESENT_POS_ADDR)
 
             if dxl_comm_result != COMM_SUCCESS:
                 rospy.logerr(f"Motor {motor_id}: Read error {dxl_comm_result}")
+                joint_pos.append(0.0)
                 continue
-            
-            joint_pos.append(dxl_pos / self.MAX_POS * 2 * math.pi)
+
+            dxl_pos = self.unsigned_to_signed(dxl_pos)
+            pos_rad = dxl_pos / self.MAX_POS * 2 * math.pi
+            joint_pos.append(pos_rad)
+
+        # Initialize zero offsets once
+        if self.zero_offsets is None:
+            self.zero_offsets = joint_pos
+            rospy.loginfo("Initialized zero offsets.")
+
+        relative_joint_pos = [
+            curr - zero for curr, zero in zip(joint_pos, self.zero_offsets)
+        ]
 
         if self.is_publishing:
-            self.joint_input_pub.publish(super().make_joint_msg(joint_pos))
+            self.joint_input_pub.publish(super().make_joint_msg(relative_joint_pos))
+
+    def unsigned_to_signed(self, val, bits=32):
+        if val >= 2**(bits - 1):
+            val -= 2**bits
+        return val
 
 def start():
     rospy.init_node("driver_node", anonymous=True)
 
-    mode = rospy.get_param("~driver_mode", "test")
+    mode = rospy.get_param("~driver_mode", "exo")
     rospy.loginfo(f"[DRIVER] mode param: {mode}")
 
     if mode == "exo":
-        exo_driver = ExoDriver([])
+        motor_ids = [1,2,3,4,5,6,7] # set for servos in wizard
+        exo_driver = ExoDriver(motor_ids)
         exo_driver.start()
     elif mode == "test":
         test_driver = TestDriver()
