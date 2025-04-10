@@ -106,9 +106,11 @@ class KeyDriver(InputDriver):
 class ExoDriver(InputDriver):
     """Driver for controlling real exoskeleton hardware via Dynamixel motors"""
     zero_offsets = None
+
     PORT = "/dev/ttyUSB0"
     BAUDRATE = 1000000  # set for all servos
     PROTOCOL_VERSION = 2.0
+    PRESENT_VEL_ADDR = 128
     PRESENT_POS_ADDR = 132  # Position address in control table (0-4095)
     MAX_POS = 4095.0
 
@@ -138,6 +140,8 @@ class ExoDriver(InputDriver):
 
             dxl_pos = self.unsigned_to_signed(dxl_pos)
             pos_rad = dxl_pos / self.MAX_POS * 2 * math.pi
+            if motor_id % 2 == 1:
+                pos_rad = -1 * pos_rad
             joint_pos.append(pos_rad)
 
         # Initialize zero offsets once
