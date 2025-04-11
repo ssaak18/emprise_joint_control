@@ -148,7 +148,7 @@ class ExoDriver(InputDriver):
             if motor_id % 2 == 1:
                 pos_rad = -1 * pos_rad
             joint_pos.append(pos_rad)
-            joint_vel.append(dxl_vel)
+            joint_vel.append(self.unsigned_to_signed(dxl_vel))
 
         # Initialize zero offsets once
         if self.zero_offsets is None:

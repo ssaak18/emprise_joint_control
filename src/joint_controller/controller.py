@@ -2,18 +2,32 @@
 import rospy
 import numpy as np
 from sensor_msgs.msg import JointState
+from pynput import keyboard
 
 class SafetySwitchControlled:
     
-    old_pos = None
+    old_pos = []
+    safe_speed = True
     
     def __init__(self, node_name):
         rospy.init_node(node_name, anonymous=True)
         self.joint_input_sub = rospy.Subscriber("/input_states", JointState, self.joint_input_callback)
         self.kinova_joint_state_pub = rospy.Publisher("/joint_states", JointState, queue_size=10)
 
+        # Keyboard listener
+        self.listener = keyboard.Listener(on_press=self.on_key_press)
+        self.listener.start()
+
+    def on_key_press(self, key):
+        """Toggle safe_speed when 'c' is pressed."""
+        try:
+            if key.char == 'c':
+                self.safe_speed = True
+        except AttributeError:
+            pass
+
     def joint_input_callback(self, joint_state_msg):
-        if self.old_pos == None:
+        if self.old_pos.__len__ == 0:
             self.old_pos = joint_state_msg.position
             
         in_bounds_pos = self.safe_move(joint_state_msg.velocity, joint_state_msg.position)
@@ -23,17 +37,18 @@ class SafetySwitchControlled:
         new_joint_state_msg.header.stamp = rospy.Time.now()
         new_joint_state_msg.name = [f"joint_{i+1}" for i in range(len(in_bounds_pos))]
         new_joint_state_msg.position = in_bounds_pos
+        new_joint_state_msg.velocity = joint_state_msg.velocity
         self.kinova_joint_state_pub.publish(new_joint_state_msg)
         
     def safe_move(self, joint_vel, new_pos):
         
         vel = np.array(joint_vel)
-        safe_speed = np.all((vel >= -100) & (vel <= 100))
+        self.safe_speed = self.safe_speed and np.all((vel >= -100) & (vel <= 100))
         
-        if safe_speed:
-            self.old_pos = self.check_joint_limit(new_pos.position)
+        if self.safe_speed:
+            self.old_pos = self.check_joint_limit(new_pos)
         else:
-            rospy.loginfo("Too fast!")
+            rospy.loginfo("Sudden movement detected! Press 'c' if this was expected.")
             
         return self.old_pos
         
