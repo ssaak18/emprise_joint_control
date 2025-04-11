@@ -8,6 +8,8 @@ import numpy as np
 from sensor_msgs.msg import JointState
 
 class InputDriver:
+
+    old_pos = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     
     def __init__(self, node_name):
         self.joint_input_pub = rospy.Publisher("/input_states", JointState, queue_size=10)
@@ -140,7 +142,7 @@ class ExoDriver(InputDriver):
 
             if dxl_comm_result1 != COMM_SUCCESS or dxl_comm_result2 != COMM_SUCCESS:
                 rospy.logerr(f"Motor {motor_id}: Read error {dxl_comm_result1, dxl_comm_result2}")
-                joint_pos.append(self.old_pos[motor_id]) # check if this is right
+                joint_pos.append(self.old_pos[motor_id - 1]) # check if this is right
                 continue
 
             dxl_pos = self.unsigned_to_signed(dxl_pos)
@@ -158,6 +160,8 @@ class ExoDriver(InputDriver):
         relative_joint_pos = [
             curr - zero for curr, zero in zip(joint_pos, self.zero_offsets)
         ]
+
+        self.old_pos = joint_pos
 
         if self.is_publishing:
             self.joint_input_pub.publish(super().make_joint_msg(relative_joint_pos, joint_vel))

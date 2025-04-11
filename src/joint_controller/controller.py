@@ -43,7 +43,7 @@ class SafetySwitchControlled:
     def safe_move(self, joint_vel, new_pos):
         
         vel = np.array(joint_vel)
-        self.safe_speed = self.safe_speed and np.all((vel >= -100) & (vel <= 100))
+        self.safe_speed = self.safe_speed and np.all((vel >= -200) & (vel <= 200))
         
         if self.safe_speed:
             self.old_pos = self.check_joint_limit(new_pos)
