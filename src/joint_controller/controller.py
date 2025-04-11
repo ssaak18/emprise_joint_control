@@ -16,9 +16,9 @@ class SafetySwitchControlled:
         if self.old_pos == None:
             self.old_pos = joint_state_msg.position
             
-        #  in_bounds_pos = self.safe_move(joint_state_msg.velocity, joint_state_msg.position)
+        in_bounds_pos = self.safe_move(joint_state_msg.velocity, joint_state_msg.position)
             
-        in_bounds_pos = self.check_joint_limit(joint_state_msg.position)
+        # in_bounds_pos = self.check_joint_limit(joint_state_msg.position)
         new_joint_state_msg = JointState()
         new_joint_state_msg.header.stamp = rospy.Time.now()
         new_joint_state_msg.name = [f"joint_{i+1}" for i in range(len(in_bounds_pos))]

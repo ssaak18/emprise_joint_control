@@ -136,11 +136,11 @@ class ExoDriver(InputDriver):
 
         for motor_id in self.motor_ids:
             dxl_pos, dxl_comm_result1, _ = self.packetHandler.read4ByteTxRx(self.portHandler, motor_id, self.PRESENT_POS_ADDR)
-            dxl_vel, dxl_comm_result2, _ = self.packetHandler.read4ByteTxRx(self.portHandler, motor_id, self.PRESENT_POS_ADDR)
+            dxl_vel, dxl_comm_result2, _ = self.packetHandler.read4ByteTxRx(self.portHandler, motor_id, self.PRESENT_VEL_ADDR)
 
             if dxl_comm_result1 != COMM_SUCCESS or dxl_comm_result2 != COMM_SUCCESS:
                 rospy.logerr(f"Motor {motor_id}: Read error {dxl_comm_result1, dxl_comm_result2}")
-                joint_pos.append(0.0)
+                joint_pos.append(self.old_pos[motor_id]) # check if this is right
                 continue
 
             dxl_pos = self.unsigned_to_signed(dxl_pos)
