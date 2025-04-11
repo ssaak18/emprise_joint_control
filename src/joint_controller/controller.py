@@ -7,6 +7,7 @@ from pynput import keyboard
 class SafetySwitchControlled:
     
     old_pos = []
+    robo_pos = np.array([0.0] * 7)
     safe_speed = True
     
     def __init__(self, node_name):
@@ -21,7 +22,7 @@ class SafetySwitchControlled:
     def on_key_press(self, key):
         """Toggle safe_speed when 'c' is pressed."""
         try:
-            if key.char == 'c':
+            if key.char == 'c' and np.all(np.abs(self.old_pos - self.robo_pos) <= 0.025):
                 self.safe_speed = True
         except AttributeError:
             pass
@@ -43,6 +44,7 @@ class SafetySwitchControlled:
     def safe_move(self, joint_vel, new_pos):
         
         vel = np.array(joint_vel)
+        
         self.safe_speed = self.safe_speed and np.all((vel >= -200) & (vel <= 200))
         
         if self.safe_speed:
@@ -69,7 +71,7 @@ class SafetySwitchControlled:
 class KinovaController(SafetySwitchControlled):
     def __init__(self):
         super().__init__("kinova_controller")
-        self.kinova_joint_state_sub = rospy.Subscriber("/joint_states", JointState, self.check_initial_pos)
+        self.kinova_joint_state_sub = rospy.Subscriber("/joint_states", JointState, self.check_pos)
         self.good_to_start = False
 
         rospy.loginfo("Move exoskeleton to initial position")
@@ -78,11 +80,14 @@ class KinovaController(SafetySwitchControlled):
 
         rospy.loginfo("Initial position reached!")
 
-    def check_initial_pos(self, joint_state_msg):
+    def check_pos(self, joint_state_msg):
         """Checks if the robot is in the initial position before starting."""
-        robot_init_pos = np.array([0.0] * 7)
-        error = 0.025  # radians
-        self.good_to_start = np.all(np.abs(robot_init_pos - joint_state_msg.position) <= error)
+        if not self.good_to_start:
+            robot_init_pos = np.array([0.0] * 7)
+            error = 0.025  # radians
+            self.good_to_start = np.all(np.abs(robot_init_pos - joint_state_msg.position) <= error)
+        else:
+            self.robo_pos = joint_state_msg.posistion
 
     def joint_input_callback(self, input_state_msg):
         """Publishes joint states only if the robot is ready to start."""
