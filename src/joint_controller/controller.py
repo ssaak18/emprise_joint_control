@@ -22,7 +22,9 @@ class SafetySwitchControlled:
     def on_key_press(self, key):
         """Toggle safe_speed when 'c' is pressed."""
         try:
-            if key.char == 'c' and np.all(np.abs(self.old_pos - self.robo_pos) <= 0.025):
+            # rospy.loginfo(self.old_pos[1::2])
+            rospy.loginfo(self.robo_pos[1::2])
+            if key.char == 'c' and np.all(np.abs(np.array([0.0] * 3) - self.robo_pos[1::2]) <= 0.25):
                 self.safe_speed = True
         except AttributeError:
             pass
@@ -50,6 +52,7 @@ class SafetySwitchControlled:
         if self.safe_speed:
             self.old_pos = self.check_joint_limit(new_pos)
         else:
+            self.robo_pos = self.check_joint_limit(new_pos)
             rospy.loginfo("Sudden movement detected! Press 'c' if this was expected.")
             
         return self.old_pos
